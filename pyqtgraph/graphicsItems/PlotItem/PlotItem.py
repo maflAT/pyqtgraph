@@ -2,6 +2,7 @@ import collections.abc
 import os
 import warnings
 import weakref
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -280,6 +281,161 @@ class PlotItem(GraphicsWidget):
         
     del _create_method
     
+    # -------------------------------------------------------------------------------- #
+    if TYPE_CHECKING:
+        def setXRange(self, min, max, padding=None, update=True):
+            """
+            Set the visible X range of the view to [*min*, *max*].
+            The *padding* argument causes the range to be set larger by the fraction specified.
+            (by default, this value is between the default padding and 0.1 depending on the size of the ViewBox)
+            """
+        def setYRange(self, min, max, padding=None, update=True):
+            """
+            Set the visible Y range of the view to [*min*, *max*].
+            The *padding* argument causes the range to be set larger by the fraction specified.
+            (by default, this value is between the default padding and 0.1 depending on the size of the ViewBox)
+            """
+        def autoRange(self, padding=None, items=None, item=None):
+            """
+            Set the range of the view box to make all children visible.
+            Note that this is not the same as enableAutoRange, which causes the view to
+            automatically auto-range whenever its contents are changed.
+
+            ==============  =============================================================
+            **Arguments:**
+            padding         The fraction of the total data range to add on to the final
+                            visible range. By default, this value is set between the 
+                            default padding and 0.1 depending on the size of the ViewBox.
+            items           If specified, this is a list of items to consider when
+                            determining the visible range.
+            ==============  =============================================================
+            """
+        def setXLink(self, view):
+            """Link this view's X axis to another view. (see LinkView)"""
+        def setYLink(self, view):
+            """Link this view's Y axis to another view. (see LinkView)"""
+        def setAutoPan(self, x=None, y=None):
+            """Set whether automatic range will only pan (not scale) the view.
+            """
+        def setAutoVisible(self, x=None, y=None):
+            """Set whether automatic range uses only visible data when determining
+            the range to show.
+            """
+        def setDefaultPadding(self, padding=0.02):
+            """
+            Sets the fraction of the data range that is used to pad the view range in when auto-ranging.
+            By default, this fraction is 0.02.
+            """
+        def setRange(self, rect=None, xRange=None, yRange=None, padding=None, update=True, disableAutoRange=True):
+            """
+            Set the visible range of the ViewBox.
+            Must specify at least one of *rect*, *xRange*, or *yRange*.
+
+            ================== =====================================================================
+            **Arguments:**
+            *rect*             (QRectF) The full range that should be visible in the view box.
+            *xRange*           (min,max) The range that should be visible along the x-axis.
+            *yRange*           (min,max) The range that should be visible along the y-axis.
+            *padding*          (float) Expand the view by a fraction of the requested range.
+                            By default, this value is set between the default padding value
+                            and 0.1 depending on the size of the ViewBox.
+            *update*           (bool) If True, update the range of the ViewBox immediately.
+                            Otherwise, the update is deferred until before the next render.
+            *disableAutoRange* (bool) If True, auto-ranging is diabled. Otherwise, it is left
+                            unchanged.
+            ================== =====================================================================
+
+            """
+        def autoRange(self, padding=None, items=None, item=None):
+            """
+            Set the range of the view box to make all children visible.
+            Note that this is not the same as enableAutoRange, which causes the view to
+            automatically auto-range whenever its contents are changed.
+
+            ==============  =============================================================
+            **Arguments:**
+            padding         The fraction of the total data range to add on to the final
+                            visible range. By default, this value is set between the 
+                            default padding and 0.1 depending on the size of the ViewBox.
+            items           If specified, this is a list of items to consider when
+                            determining the visible range.
+            ==============  =============================================================
+            """
+        def viewRect(self):
+            """Return a QRectF bounding the region visible within the ViewBox"""
+        def viewRange(self):
+            """Return a the view's visible range as a list: [[xmin, xmax], [ymin, ymax]]"""
+        def setMouseEnabled(self, x=None, y=None):
+            """
+            Set whether each axis is enabled for mouse interaction. *x*, *y* arguments must be True or False.
+            This allows the user to pan/scale one axis of the view while leaving the other axis unchanged.
+            """
+        def setLimits(self, **kwds):
+            """
+            Set limits that constrain the possible view ranges.
+
+            **Panning limits**. The following arguments define the region within the
+            viewbox coordinate system that may be accessed by panning the view.
+
+            =========== ============================================================
+            xMin        Minimum allowed x-axis value
+            xMax        Maximum allowed x-axis value
+            yMin        Minimum allowed y-axis value
+            yMax        Maximum allowed y-axis value
+            =========== ============================================================
+
+            **Scaling limits**. These arguments prevent the view being zoomed in or
+            out too far.
+
+            =========== ============================================================
+            minXRange   Minimum allowed left-to-right span across the view.
+            maxXRange   Maximum allowed left-to-right span across the view.
+            minYRange   Minimum allowed top-to-bottom span across the view.
+            maxYRange   Maximum allowed top-to-bottom span across the view.
+            =========== ============================================================
+
+            Added in version 0.9.9
+            """
+        def enableAutoRange(self, axis=None, enable=True, x=None, y=None):
+            """
+            Enable (or disable) auto-range for *axis*, which may be ViewBox.XAxis, ViewBox.YAxis, or ViewBox.XYAxes for both
+            (if *axis* is omitted, both axes will be changed).
+            When enabled, the axis will automatically rescale when items are added/removed or change their shape.
+            The argument *enable* may optionally be a float (0.0-1.0) which indicates the fraction of the data that should
+            be visible (this only works with items implementing a dataBounds method, such as PlotDataItem).
+            """
+        def disableAutoRange(self, axis=None):
+            """Disables auto-range. (See enableAutoRange)"""
+        def setAspectLocked(self, lock=True, ratio=1):
+            """
+            If the aspect ratio is locked, view scaling must always preserve the aspect ratio.
+            By default, the ratio is set to 1; x and y both have the same scaling.
+            This ratio can be overridden (xScale/yScale), or use None to lock in the current ratio.
+            """
+        def invertY(self, b=True):
+            """
+            By default, the positive y-axis points upward on the screen. Use invertY(True) to reverse the y-axis.
+            """
+        def invertX(self, b=True):
+            """
+            By default, the positive x-axis points rightward on the screen. Use invertX(True) to reverse the x-axis.
+            """
+        def register(self, name):
+            """
+            Add this ViewBox to the registered list of views.
+
+            This allows users to manually link the axes of any other ViewBox to
+            this one. The specified *name* will appear in the drop-down lists for
+            axis linking in the context menus of all other views.
+
+            The same can be accomplished by initializing the ViewBox with the *name* attribute.
+            """
+        def unregister(self):
+            """
+            Remove this ViewBox from the list of linkable views. (see :func:`register() <pyqtgraph.ViewBox.register>`)
+            """
+    # -------------------------------------------------------------------------------- #
+
     def setAxisItems(self, axisItems=None):
         """
         Place axis items as given by `axisItems`. Initializes non-existing axis items.
