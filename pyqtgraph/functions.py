@@ -11,9 +11,11 @@ import struct
 import sys
 import warnings
 from collections import OrderedDict
-from typing import Literal, TypedDict
+from collections.abc import Sequence
+from typing import Any, Literal, TypedDict, Unpack, overload
 
 import numpy as np
+from numpy.typing import NDArray
 
 from . import Qt, debug, getConfigOption, reload
 from .Qt import QT_LIB, QtCore, QtGui
@@ -73,6 +75,8 @@ FLOAT_REGEX_PERIOD = re.compile(r'(?P<number>[+-]?((((\d+(\.\d*)?)|(\d*\.\d+))([
 INT_REGEX = re.compile(r'(?P<number>[+-]?\d+)\s*(?P<siPrefix>[u' + SI_PREFIXES + r']?)(?P<suffix>.*)$')
 
 class HueKeywordArgs(TypedDict):
+    """Parameters, accepted by :func:`intColor() <pyqtgraph.intColor>`"""
+
     hues: int
     values: int
     maxValue: int
@@ -305,18 +309,26 @@ def float_regex_for_locale(locale = QtCore.QLocale()) -> re.Pattern:
         return FLOAT_REGEX_PERIOD
 
 class Color(QtGui.QColor):
-    def __init__(self, *args):
+    @overload
+    def __init__(self, c: color_like, /) -> None: ...
+    @overload
+    def __init__(self, r: int, g: int, b: int, a: int = ..., /) -> None: ...
+    def __init__(self, *args: Any) -> None:
         QtGui.QColor.__init__(self, mkColor(*args))
-        
-    def glColor(self):
+
+    def glColor(self) -> tuple[float, float, float, float]:
         """Return (r,g,b,a) normalized for use in opengl"""
         return self.getRgbF()
-        
-    def __getitem__(self, ind):
+
+    def __getitem__(self, ind: int) -> int:
         return (self.red, self.green, self.blue, self.alpha)[ind]()
 
 
-def mkColor(*args) -> QtGui.QColor:
+@overload
+def mkColor(c: color_like, /) -> QtGui.QColor: ...
+@overload
+def mkColor(r: int, g: int, b: int, a: int = ..., /) -> QtGui.QColor: ...
+def mkColor(*args: Any) -> QtGui.QColor:
     """
     Convenience function for constructing QColor from a variety of argument 
     types. Accepted arguments are:
@@ -435,7 +447,13 @@ def _resolveColorArg(args, kwargs, key='color', hsvKey='hsv'):
     return color
 
 
-def mkBrush(*args, **kwargs):
+@overload
+def mkBrush(color: color_like) -> QtGui.QBrush: ...
+@overload
+def mkBrush(brush: QtGui.QBrush | None, /) -> QtGui.QBrush: ...
+@overload
+def mkBrush(r: int, g: int, b: int, a: int = ..., /) -> QtGui.QBrush: ...
+def mkBrush(*args: Any, **kwargs: Any) -> QtGui.QBrush:
     """
     Convenience function for constructing QBrush.
 
@@ -470,7 +488,26 @@ def mkBrush(*args, **kwargs):
     return brush
 
 
-def mkPen(*args, **kwargs) -> QtGui.QPen:
+class PenKeywordArgs(TypedDict, total=False):
+    """Keyword parameters, accepted by :func:`mkPen() <pyqtgraph.mkPen>`"""
+
+    color: color_like
+    width: float
+    cosmetic: bool
+    style: QtCore.Qt.PenStyle
+    dash: Sequence[float]
+    hsv: tuple[float, float, float] | tuple[float, float, float, float]
+
+
+@overload
+def mkPen(pen: QtGui.QPen | PenKeywordArgs | None, /) -> QtGui.QPen: ...
+@overload
+def mkPen(c: color_like = ..., /, **kwargs: Unpack[PenKeywordArgs]) -> QtGui.QPen: ...
+@overload
+def mkPen(
+    r: int, g: int, b: int, a: int = ..., /, **kwargs: Unpack[PenKeywordArgs]
+) -> QtGui.QPen: ...
+def mkPen(*args: Any, **kwargs: Any) -> QtGui.QPen:
     """
     Convenience function for constructing QPen.
 
@@ -521,7 +558,9 @@ def mkPen(*args, **kwargs) -> QtGui.QPen:
     return pen
 
 
-def hsvColor(hue, sat=1.0, val=1.0, alpha=1.0):
+def hsvColor(
+    hue: float, sat: float = 1.0, val: float = 1.0, alpha: float = 1.0
+) -> QtGui.QColor:
     """Generate a QColor from HSVa values. (all arguments are float 0.0-1.0)"""
     return QtGui.QColor.fromHsvF(hue, sat, val, alpha)
     
@@ -539,7 +578,7 @@ MATRIX_RGB_FROM_XYZ = np.array( (
 
 VECTOR_XYZn = np.array( ( 0.9505, 1.0000, 1.0891) ) # white reference at illuminant D65
 
-def CIELabColor(L, a, b, alpha=1.0):
+def CIELabColor(L: float, a: float, b: float, alpha: float = 1.0) -> QtGui.QColor:
     """
     Generates as QColor from CIE L*a*b* values.
     
@@ -608,7 +647,7 @@ def CIELabColor(L, a, b, alpha=1.0):
     arr_sRGB = clip_array( arr_sRGB, 0.0, 1.0 ) # avoid QColor errors
     return QtGui.QColor.fromRgbF( *arr_sRGB, alpha )
 
-def colorCIELab(qcol):
+def colorCIELab(qcol: QtGui.QColor) -> NDArray[np.floating]:
     """
     Describes a QColor by an array of CIE L*a*b* values.
     Also see :func:`CIELabColor() <pyqtgraph.CIELabColor>` .
@@ -681,16 +720,28 @@ def colorDistance(colors, metric='CIE76'):
         return np.array(dist)
     raise ValueError(f'Metric {metric} is not available.')
 
-def colorTuple(c):
+
+def colorTuple(c: QtGui.QColor) -> tuple[int, int, int, int]:
     """Return a tuple (R,G,B,A) from a QColor"""
     return c.getRgb()
 
-def colorStr(c):
+
+def colorStr(c: QtGui.QColor) -> str:
     """Generate a hex string code from a QColor"""
     return ('%02x'*4) % colorTuple(c)
 
 
-def intColor(index, hues=9, values=1, maxValue=255, minValue=150, maxHue=360, minHue=0, sat=255, alpha=255):
+def intColor(
+    index: int,
+    hues: int = 9,
+    values: int = 1,
+    maxValue: int = 255,
+    minValue: int = 150,
+    maxHue: int = 360,
+    minHue: int = 0,
+    sat: int = 255,
+    alpha: int = 255,
+) -> QtGui.QColor:
     """
     Creates a QColor from a single index. Useful for stepping through a predefined list of colors.
     
@@ -712,7 +763,13 @@ def intColor(index, hues=9, values=1, maxValue=255, minValue=150, maxHue=360, mi
     return QtGui.QColor.fromHsv(h, sat, v, alpha)
 
 
-def glColor(*args, **kwargs):
+@overload
+def glColor(c: color_like, /) -> tuple[float, float, float, float]: ...
+@overload
+def glColor(
+    r: int, g: int, b: int, a: int = ..., /
+) -> tuple[float, float, float, float]: ...
+def glColor(*args: Any, **kwargs: Any) -> tuple[float, float, float, float]:
     """
     Convert a color to OpenGL color format (r,g,b,a) floats 0.0-1.0
     Accepts same arguments as :func:`mkColor <pyqtgraph.mkColor>`.
